@@ -1,15 +1,9 @@
 import pandas as pd
 
-
-"""
-Current Issues:
-1. makes sec contact email and phone sometimes when its not needed
-- check how rows merge with columns dont start fn ln em
-"""
-
+# SECOND CONTACT PHONE DOESNT MERGE
 
 # point to file location.
-filename = '/Users/derrick/Documents/Random Stuff/CSV/firstname.csv'
+filename = '/Users/derrick/Documents/Random Stuff/CSV/4.csv'
 df = pd.read_csv(filename)
 df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
 df.index += 2  # so when it says "check these lines" the numbers match with csv
@@ -17,7 +11,7 @@ df = df.dropna(how='all')  # removes rows that are completely empty
 
 cols = list(df)
 if 'email' not in cols:
-    if 'email_address':
+    if 'email_address' in cols:
         df.rename(columns={'email_address': 'email'}, inplace=True)
     elif 'emailaddress' in cols:
         df.rename(columns={'emailaddress': 'email'}, inplace=True)
@@ -43,27 +37,16 @@ phone_bad = list(phone_len[(phone_len > 0) & (phone_len < 8) | (phone_len > 15)]
 # not sure if this is the best way
 # keeping name column for now to be safe.
 if 'first_name' and 'last_name' not in cols:
-    if 'firstname' and 'lastname':
+    if 'firstname' and 'lastname' in cols:
         df.rename(columns={'firstname': 'first_name', 'lastname': 'last_name'}, inplace=True)
     elif 'name' in cols:
         df[['first_name', 'last_name']] = df.name.str.split(' ', 1, expand=True)
     else:
         print("Who are these people!?")
 
-"""
-# checks to see if they have a name column or first and last name cols
-# not sure if its needed yet
-cols = list(df)
-if 'first_name' and 'last_name' or 'name' not in cols:
-    if  'name' not in cols:
-        print('No first name and last name or name column')
-        exit()
-else:
-    pass
-"""
 
 if 'phone' not in cols:
-    if 'phone_number':
+    if 'phone_number' in cols:
         df.rename(columns={'phone_number': 'phone'}, inplace=True)
     elif 'mobile_phone' in cols:
         df.rename(columns={'mobile_phone': 'phone'}, inplace=True)
@@ -71,15 +54,19 @@ if 'phone' not in cols:
         print("What are these peoples numbers!?")
 
 
-if (email_list.str.contains(',')).any():
-    # splits email list so that everything before comma is put in email and the rest into secondary_email
-    df[['email', 'secondary_email']] = email_list.str.split(',', 1).apply(pd.Series)
-
+if (df['email'].str.contains(',')).any():
+    df['secondary_email'] = None
     df.columns = df.columns.fillna('secondary_email')
 
-    if 'second_contact_email' in df.columns:  # this handles in case they do have the 'second_contact_email' column
+    # splits email list so that everything before comma is put in email and the rest into secondary_email
+    df['email'], df['secondary_email'] = df['email'].str.split(',', 1).str
+
+    if 'second_contact_email' in cols:  # this handles in case they do have the 'second_contact_email' column
         # Merges secondary_email into the 'second_contact_email' column
-        df['second_contact_email'] = df['second_contact_email'].astype(str) + ',' + df['secondary_email']
+        df['second_contact_email'] = df['second_contact_email'].fillna('') + ', ' + df['secondary_email'].fillna('')
+        # this is to just clean up column (i.e. remove leadning what space and random extra commas from merge)
+        df['second_contact_email'] = df['second_contact_email'].replace('((, )$|[,]$)|(^\s)', '', regex=True)
+
         df = df.iloc[:, :-1]  # drops last column so there isn't double 'second_contact_email'
 
     df.rename(columns={'secondary_email': 'second_contact_email'}, inplace=True)
@@ -88,15 +75,27 @@ else:
 
 
 # validate email and move bad ones
-df['second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
+df['temp_second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
 df['email'] = df[df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
+# merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
+df['second_contact_email'] = df['second_contact_email'].fillna('') + ', ' + df['temp_second_contact_email'].fillna('')
+del df['temp_second_contact_email']
+# this is to just clean up column (i.e. remove leadning what space and random extra commas from merge)
+df['second_contact_email'] = df['second_contact_email'].replace('((, )$|[,]$)|(^\s)', '', regex=True)
+
 
 # only keep numbers in phone column
 df['phone'] = df['phone'].replace('[^0-9]+', '', regex=True)
 
 # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
-df['second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
+df['temp_second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
 df['phone'] = df[df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
+
+# merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
+df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_second_contact_phone'].astype(str).fillna('')
+del df['temp_second_contact_phone']
+# this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
+df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0)$)', '', regex=True)
 
 
 # needed for below merger. Gets column headers
@@ -142,4 +141,3 @@ df = df.replace('(?:^|\W)nan(?:$|\W)', '', regex=True)
 df.columns = [i.title().replace('_', ' ') for i in df.columns]
 df.to_csv('/Users/derrick/Desktop/done.csv', index=False)
 print('CSV has been printed.')
-
