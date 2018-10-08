@@ -1,12 +1,15 @@
 import pandas as pd
+from header_list import first_name_list, last_name_list, email_list, phone_list
 
 
 """
+- Add sets to another file and import that file to clean up code
+- Change headers to speed up header matching (?)
 - I have been told there is a 5 mb csv size limit so need to change the size limit on the site
 """
 
 # point to file location.
-filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/export32.csv'
+filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/export.csv'
 df = pd.read_csv(filename)
 df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
 df.index += 2  # so when it says "check these lines" the numbers match with csv
@@ -14,19 +17,6 @@ df.index += 2  # so when it says "check these lines" the numbers match with csv
 df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
-
-# comment this asap
-first_name_list = [
-    'firstname',
-    'primary_firstname',
-    'lead_first_name',
-    ]
-
-last_name_list = [
-    'lastname',
-    'primary_lastname',
-    'lead_last_name',
-    ]
 
 if 'first_name' and 'last_name' not in df.columns:
     if 'first_name' not in df.columns:
@@ -65,23 +55,11 @@ if 'first_name' and 'last_name' not in df.columns:
                 except:
                     raise IndexError("No columns match values in last_name_list")
 
-
 if 'first_name' and 'last_name' not in df.columns:
     if 'name' in df.columns:
         df[['first_name', 'last_name']] = df.name.str.split(' ', 1, expand=True)
     else:
         raise IndexError("No column names match first_name and last_name")
-
-
-email_list = [
-    'email_address',
-    'emailaddress',
-    'email_(personal)_#1',
-    'email_address_1',
-    'email_1',
-    'lead_email',
-    'emails',
-    ]
 
 if 'email' not in df.columns:
     tried_emails = []
@@ -99,22 +77,6 @@ if 'email' not in df.columns:
                 break
         except:
             raise IndexError("No columns match values in email_list")
-
-
-phone_list = [
-    'mobile_phone',
-    'cell_phone',
-    'primary_mobile_phone',
-    'phone_(mobile)_#1',
-    'telephone1',
-    'phone_1',
-    'phone_number',
-    'lead_phone',
-    'home_phone',
-    'home_#',
-    'phone_numbers',
-    'phones',
-    ]
 
 if 'phone' not in df.columns:
     tried_phones = []
@@ -144,11 +106,12 @@ if 'phone' not in df.columns:
         print('No columns including "phones" exists.')
 """
 
+"""
 # not sure if I want to keep added for one CSV I did
 if 'address' not in df.columns:
     if 'house_number' and 'direction_prefix' and 'street' and 'street_designator' and 'suite_no' in df.columns:
         df['address'] = df['house_number'].fillna('') + ' ' + df['direction_prefix'].fillna('') + ' ' + df['street'].fillna('') + df['street_designator'].fillna('') + ' ' + df['suite_no'].fillna('')
-
+"""
 
 # have to do this again to update cols variable with new column names in case some changed
 cols = list(df)
