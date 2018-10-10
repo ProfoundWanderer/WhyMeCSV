@@ -1,26 +1,15 @@
-first_name_list = [
+colss = ['first_name', 'last_name', 'phone', 'email']
+    
+listt = [
+    [
     'firstname',
     'primary_firstname',
     'lead_first_name',
-    ]
-
-last_name_list = [
+    ], [
     'lastname',
     'primary_lastname',
     'lead_last_name',
-    ]
-
-email_list = [
-    'email_address',
-    'emailaddress',
-    'email_(personal)_#1',
-    'email_address_1',
-    'email_1',
-    'lead_email',
-    'emails',
-    ]
-
-phone_list = [
+    ], [
     'mobile_phone',
     'cell_phone',
     'primary_mobile_phone',
@@ -33,4 +22,13 @@ phone_list = [
     'home_#',
     'phone_numbers',
     'phones',
+    ], [
+    'email_address',
+    'emailaddress',
+    'email_(personal)_#1',
+    'email_address_1',
+    'email_1',
+    'lead_email',
+    'emails',
+    ]
     ]
