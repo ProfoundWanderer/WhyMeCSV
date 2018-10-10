@@ -1,10 +1,10 @@
 import pandas as pd
-from header_list import first_name_list, last_name_list, email_list, phone_list
+from header_list import colss, listt
 
 
 """
-- Add sets to another file and import that file to clean up code
 - Change headers to speed up header matching (?)
+  - Make if statements a function
 - I have been told there is a 5 mb csv size limit so need to change the size limit on the site
 """
 
@@ -17,94 +17,30 @@ df.index += 2  # so when it says "check these lines" the numbers match with csv
 df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
-
-if 'first_name' and 'last_name' not in df.columns:
-    if 'first_name' not in df.columns:
-        tried_first_names = []
-        for key in first_name_list:
-            try:
-                df.rename(columns={key: 'first_name'}, inplace=True)
-                if 'first_name' not in df.columns:
-                    tried_first_names.append(key)
-                    if len(tried_first_names) == 3:
-                        try:
-                            df = df.rename(columns={df.filter(like='firstname').columns[0]: 'first_name'})
-                        except IndexError:
-                            # pass so can check if there is a 'name' column
-                            pass
-                else:
-                    break
-            except:
-                raise IndexError("No columns match values in first_name_list")
-    if 'first_name' in df.columns:
-        if 'last_name' not in df.columns:
-            tried_last_names = []
-            for key in last_name_list:
+# works but need it to do this with other stuff to
+def rename(colname, listt, dataframe):
+    if colname not in dataframe.columns:
+        tried_colname = []
+        for x in listt:
+            for y in x:
                 try:
-                    df.rename(columns={key: 'last_name'}, inplace=True)
-                    if 'last_name' not in df.columns:
-                        tried_last_names.append(key)
-                        if len(tried_last_names) == 3:
+                    dataframe.rename(columns={y: colname}, inplace=True)
+                    if colname not in dataframe.columns:
+                        tried_colname.append(y)
+                        if len(tried_colname) == 12:
                             try:
-                                df = df.rename(columns={df.filter(like='lastname').columns[0]: 'last_name'})
+                                dataframe = dataframe.rename(columns={dataframe.filter(like=colname).columns[0]: colname})
+                                return(dataframe)
                             except IndexError:
-                                # pass so can check if there is a 'name' column
-                                pass
+                                raise IndexError
                     else:
-                        break
+                        return(dataframe)
                 except:
-                    raise IndexError("No columns match values in last_name_list")
+                    raise IndexError(f"No columns match values in {colname} list.")
 
-if 'first_name' and 'last_name' not in df.columns:
-    if 'name' in df.columns:
-        df[['first_name', 'last_name']] = df.name.str.split(' ', 1, expand=True)
-    else:
-        raise IndexError("No column names match first_name and last_name")
+for x in colss:
+    df = rename(x, listt, df)
 
-if 'email' not in df.columns:
-    tried_emails = []
-    for key in email_list:
-        try:
-            df.rename(columns={key: 'email'}, inplace=True)
-            if 'email' not in df.columns:
-                tried_emails.append(key)
-                if len(tried_emails) == 7:
-                    try:
-                        df = df.rename(columns={df.filter(like='email').columns[0]: 'email'})
-                    except IndexError:
-                        raise IndexError
-            else:
-                break
-        except:
-            raise IndexError("No columns match values in email_list")
-
-if 'phone' not in df.columns:
-    tried_phones = []
-    for key in phone_list:
-        try:
-            df.rename(columns={key: 'phone'}, inplace=True)
-            if 'phone' not in df.columns:
-                tried_phones.append(key)
-                if len(tried_phones) == 12:
-                    try:
-                        df = df.rename(columns={df.filter(like='phone').columns[0]: 'phone'})
-                    except IndexError:
-                        raise IndexError
-            else:
-                break
-        except:
-            raise IndexError("No columns match values in phone_list")
-
-
-"""
-# this looks for a column like 'phone' with the least amount of code but can sometimes match homephone before mobile phone depending on CSV format
-# may switch to this if I don't think it will be an issue or current way grows seems too much
-if 'phone' not in df.columns:
-    try:
-        df = df.rename(columns={df.filter(like='phone').columns[0]: 'phone'})
-    except IndexError:
-        print('No columns including "phones" exists.')
-"""
 
 """
 # not sure if I want to keep added for one CSV I did
