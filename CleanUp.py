@@ -18,28 +18,49 @@ df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
 # works but need it to do this with other stuff to
-def rename(colname, listt, dataframe):
+# make it not skip fn ln em ph if not matched but skip other stuff
+# have it do some leadalicious stuff
+def rename(colname, listt, dataframe, a, b):
     if colname not in dataframe.columns:
         tried_colname = []
         for x in listt:
-            for y in x:
-                try:
-                    dataframe.rename(columns={y: colname}, inplace=True)
-                    if colname not in dataframe.columns:
-                        tried_colname.append(y)
-                        if len(tried_colname) == 12:
-                            try:
-                                dataframe = dataframe.rename(columns={dataframe.filter(like=colname).columns[0]: colname})
-                                return(dataframe)
-                            except IndexError:
-                                raise IndexError
-                    else:
-                        return(dataframe)
-                except:
-                    raise IndexError(f"No columns match values in {colname} list.")
+            #make it get list of list
+            x = listt[a][b]
+            try:
+                # print(y, colname)
+                dataframe.rename(columns={x: colname}, inplace=True)
+                if colname not in dataframe.columns:
+                    tried_colname.append(x)
+                    b += 1
+                    # len works but idk if its best
+                    if len(tried_colname) == 25:
+                        try:
+                            dataframe = dataframe.rename(columns={dataframe.filter(like=colname).columns[0]: colname})
+                            return(dataframe)
+                        except IndexError:
+                            continue
+                else:
+                    dataframe.to_csv('/Users/derrick/Desktop/111111.csv', index=False)
+                    return(dataframe)
+            except:
+                continue
 
+c = 0
 for x in colss:
-    df = rename(x, listt, df)
+    d = 0
+    df = rename(x, listt, df, c, d)
+    c += 1
+
+
+if 'first_name' not in df.columns:
+    raise KeyError('CSV file does not have a first_name column.')
+if 'last_name' not in df.columns:
+    raise KeyError('CSV file does not have a last_name column.')
+if 'email' not in df.columns:
+    raise KeyError('CSV file does not have a email column.')
+if 'phone' not in df.columns:
+    raise KeyError('CSV file does not have a phone column.')
+
 
 
 """
