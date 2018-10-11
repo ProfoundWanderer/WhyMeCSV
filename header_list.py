@@ -1,4 +1,4 @@
-colss = ['first_name', 'last_name', 'phone', 'email']
+colss = ['first_name', 'last_name', 'email', 'phone']
     
 listt = [
     [
@@ -9,6 +9,14 @@ listt = [
     'lastname',
     'primary_lastname',
     'lead_last_name',
+    ], [
+    'email_address',
+    'emailaddress',
+    'email_(personal)_#1',
+    'email_address_1',
+    'email_1',
+    'lead_email',
+    'emails',
     ], [
     'mobile_phone',
     'cell_phone',
@@ -22,13 +30,5 @@ listt = [
     'home_#',
     'phone_numbers',
     'phones',
-    ], [
-    'email_address',
-    'emailaddress',
-    'email_(personal)_#1',
-    'email_address_1',
-    'email_1',
-    'lead_email',
-    'emails',
     ]
     ]
