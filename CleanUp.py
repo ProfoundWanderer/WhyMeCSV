@@ -1,15 +1,13 @@
 import pandas as pd
-from header_list import colss, listt
+from header_list import rename_list, match_list
 
 
 """
-- Change headers to speed up header matching (?)
-  - Make if statements a function
-- I have been told there is a 5 mb csv size limit so need to change the size limit on the site
+- Make rename/matching a function?
 """
 
 # point to file location.
-filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/export.csv'
+filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/over2MB.csv'
 df = pd.read_csv(filename)
 df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
 df.index += 2  # so when it says "check these lines" the numbers match with csv
@@ -17,39 +15,46 @@ df.index += 2  # so when it says "check these lines" the numbers match with csv
 df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
+
+# might put into a functions
 # works but need it to do this with other stuff to
 # make it not skip fn ln em ph if not matched but skip other stuff
 # have it do some leadalicious stuff
-def rename(colname, listt, dataframe, a, b):
-    if colname not in dataframe.columns:
-        tried_colname = []
-        for x in listt:
-            #make it get list of list
-            x = listt[a][b]
+i = -1
+# for each item in rename_list
+for rename_col in rename_list:
+    i += 1
+    # get i nested list in match_list and assign it to current_list
+    current_list = match_list[i]
+    tried_colname = []
+    for try_col in current_list:
+        if rename_col not in df.columns:
             try:
-                # print(y, colname)
-                dataframe.rename(columns={x: colname}, inplace=True)
-                if colname not in dataframe.columns:
-                    tried_colname.append(x)
-                    b += 1
+                df.rename(columns={try_col: rename_col}, inplace=True)
+                tried_colname.append(try_col)
+                if rename_col not in df.columns and i < 4:
                     # len works but idk if its best
-                    if len(tried_colname) == 25:
+                    if len(tried_colname) == len(current_list):
                         try:
-                            dataframe = dataframe.rename(columns={dataframe.filter(like=colname).columns[0]: colname})
-                            return(dataframe)
-                        except IndexError:
+                            df = df.rename(columns={df.filter(like=rename_col).columns[0]: rename_col})
+                            print('Filter match', rename_col)
                             continue
+                        except Exception as e:
+                            print(f"Unable to match a column the same as or close to {rename_col}. - Exception: {e}")
+                            break
+                    else:
+                        continue
+                elif rename_col in df.columns:
+                    print(f"Matched {rename_col} with {try_col}.")
+                    break
                 else:
-                    dataframe.to_csv('/Users/derrick/Desktop/111111.csv', index=False)
-                    return(dataframe)
-            except:
-                continue
-
-c = 0
-for x in colss:
-    d = 0
-    df = rename(x, listt, df, c, d)
-    c += 1
+                    print(f"Unable to match {rename_col} with any columns.")
+                    break
+            except Exception as e:
+                print(f"How did you get here!? - Exception: {e}")
+                break
+        else:
+            break  # just to be safe
 
 
 if 'first_name' not in df.columns:
@@ -62,18 +67,31 @@ if 'phone' not in df.columns:
     raise KeyError('CSV file does not have a phone column.')
 
 
-
-"""
-# not sure if I want to keep added for one CSV I did
 if 'address' not in df.columns:
-    if 'house_number' and 'direction_prefix' and 'street' and 'street_designator' and 'suite_no' in df.columns:
-        df['address'] = df['house_number'].fillna('') + ' ' + df['direction_prefix'].fillna('') + ' ' + df['street'].fillna('') + df['street_designator'].fillna('') + ' ' + df['suite_no'].fillna('')
-"""
+    if set(['house_number', 'dir_prefix', 'street', 'street_type', 'dir_suffix', 'suite', 'po_box']).issubset(df.columns):
+        df['address'] = (df['house_number'].astype(str).fillna('') + ' ' + df['dir_prefix'].astype(str).fillna('') + ' ' + 
+        df['street'].astype(str).fillna('') + ' ' + df['street_type'].astype(str).fillna('') + ' ' + df['dir_suffix'].astype(str).fillna('') + ' ' + 
+        df['suite'].astype(str).fillna('') + ' ' + df['po_box'].astype(str).fillna(''))
+    elif set(['house_number', 'direction_prefix', 'street', 'street_designator', 'suite_no']).issubset(df.columns):
+        df['address'] = (df['house_number'].astype(str).fillna('') + ' ' + df['direction_prefix'].astype(str).fillna('') + ' ' + 
+        df['street'].astype(str).fillna('') + ' ' + df['street_designator'].astype(str).fillna('') + ' ' + df['suite_no'].astype(str).fillna(''))
+
+if 'assigned_agent' not in df.columns:
+    if set(['member_first_name', 'member_last_name']).issubset(df.columns):
+        df['assigned_agent'] = df['member_first_name'].fillna('') + ' ' + df['member_last_name'].fillna('')
+
+if 'second_contact_name' not in df.columns:
+    if set(['secondary_title', 'secondary_first_name', 'secondary_nickname', 'secondary_last_name']).issubset(df.columns):
+        df['second_contact_name'] = (df['secondary_title'].fillna('') + ' ' + df['secondary_first_name'].fillna('') + ' ' + 
+        df['secondary_nickname'].fillna('') + df['secondary_last_name'].fillna(''))
+    elif set(['first_name_2', 'last_name_2']).issubset(df.columns):
+        df['second_contact_name'] = df['first_name_2'].fillna('') + ' ' + df['last_name_2'].fillna('')
+
 
 # have to do this again to update cols variable with new column names in case some changed
 cols = list(df)
 
-# leaving these 2 just as a stafety check
+"""
 email_list = df['email']
 email_counts = email_list.value_counts()
 duplicate_emails = list(email_counts[email_counts > 1].index)
@@ -84,7 +102,7 @@ phone_list = phone_list.replace('[^0-9]+', '', regex=True)  # remove special cha
 phone_len = phone_list.str.len()
 phone_bad = list(phone_len[(phone_len < 8) | (phone_len > 15)].index)
 print(f'Check these lines for an incomplete phone number: {phone_bad}')
-
+"""
 
 # reorder columns to when they are merged it doesn't have double emails or phone numbers which bypasses the validation
 cols.insert(0, cols.pop(cols.index('first_name')))
@@ -178,7 +196,7 @@ df.groupby('email').agg(lambda x: ", ".join(x)).reset_index()
 del df['first_dupe']
 
 
-if df.phone.str.contains(',').any():
+if df.phone.astype(str).str.contains(',').any():
     if 'second_contact_phone' in df.columns:
         # split phone numbers by comma and add to second_contact_phone
         df['phone'], df['temp_phone'] = df['phone'].str.split(',', 1).str
@@ -194,7 +212,7 @@ if df.phone.str.contains(',').any():
 df['phone'] = df['phone'].replace('[^0-9]+', '', regex=True)
 
 # if there is a bad phone then do stuff. its here to help with speed (not an issue but who knows) and to stop adding a second_contact_phone when its not needed
-if df.phone.str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
+if df.phone.astype(str).str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
     if 'second_contact_phone' in df.columns:
         # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
         df['temp_second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
@@ -202,6 +220,10 @@ if df.phone.str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
         # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
         df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_second_contact_phone'].astype(str).fillna('')
         del df['temp_second_contact_phone']
+        # this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
+        df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
+        # definitely not needed but one case bothered me so I added it
+        df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
     else:
         if 'second_contact_phone' not in df.columns:
             df['second_contact_phone'] = ''
@@ -211,6 +233,10 @@ if df.phone.str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
             # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
             df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_second_contact_phone'].astype(str).fillna('')
             del df['temp_second_contact_phone']
+            # this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
+            df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
+            # definitely not needed but one case bothered me so I added it
+            df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
 
 
 # gets rid of random nan that pops up sometimes
@@ -218,10 +244,6 @@ df = df.replace('(?:^|\W)nan(?:$|\W)', '', regex=True)
 # these two just cleans up the file and gets rid of random commas. Not really necessary but you know makes the file less ugly
 df = df.replace('^(, )|^(,)', '', regex=True)
 df = df.replace('(, , )', ', ', regex=True)
-# this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
-df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
-# definitely not needed but one case bothered me so I added it
-df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
 
 
 # Convert names back from ex. first_name so system auto catches it
