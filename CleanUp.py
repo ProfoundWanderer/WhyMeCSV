@@ -2,15 +2,25 @@ import pandas as pd
 from header_list import rename_list, match_list
 
 
+# still adds .0 - think solved by dtye=str
+# think about removing trailing white space in email column to help validator
+
 # point to file location.
-filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/over2MB.csv'
-df = pd.read_csv(filename)
+filename = '/Users/derrick/Documents/Random Stuff/CSV/test.csv'
+# sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
+df = pd.read_csv(filename, sep=None, dtype=str, engine='python')
 df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
 df.index += 2  # so when it says "check these lines" the numbers match with csv
 # removes empty rows then empty columns
 df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
+if 'first_name' and 'last_name' not in df.columns:
+    if 'name' in df.columns:
+        df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
+    # for top producer
+    elif 'contact' in df.columns:
+        df[['last_name', 'first_name']] = df['contact'].str.split(',', 1, expand=True)
 
 # might put into a functions
 # starts at -1 so it doesn't skip first entry in list
@@ -40,27 +50,26 @@ for rename_col in rename_list:
                         try:
                             # try to find the first column in df that is similar to rename_col and rename it to rename_col
                             df = df.rename(columns={df.filter(like=rename_col).columns[0]: rename_col})
-                            print('Filter match', rename_col)
+                            # print('Filter match', rename_col)
                             continue
                         # if try didn't work then throw exception since those 4 columns are needed for merger
                         except Exception as e:
-                            print(f"Unable to match a column the same as or close to {rename_col}. - Exception: {e}")
+                            # print(f"Unable to match a column the same as or close to {rename_col}. - Exception: {e}")
                             break
                     else:
                         continue
                 # this breaks so it doesn't continue trying to check when it has already been match
                 elif rename_col in df.columns:
-                    print(f"Matched {rename_col} with {try_col}.")
+                    # print(f"Matched {rename_col} with {try_col}.")
                     break
                 else:
-                    print(f"Unable to match {rename_col} with any columns.")
-                    break
+                    # print(f"Unable to match {rename_col} with {try_col}.")
+                    continue
             except Exception as e:
                 print(f"How did you get here!? - Exception: {e}")
                 break
         else:
             break  # just to be safe
-
 
 # not needed since above raises an exception if any of the below columns aren't in df or matched this is just a safety check since it is quick
 if 'first_name' not in df.columns:
@@ -69,8 +78,9 @@ if 'last_name' not in df.columns:
     raise KeyError('CSV file does not have a last_name column.')
 if 'email' not in df.columns:
     raise KeyError('CSV file does not have a email column.')
-if 'phone' not in df.columns:
-    raise KeyError('CSV file does not have a phone column.')
+# phone may not be important for merger so testing
+# if 'phone' not in df.columns:
+    # raise KeyError('CSV file does not have a phone column.')
 
 
 if 'address' not in df.columns:
@@ -117,7 +127,7 @@ print(f'Check these lines for an incomplete phone number: {phone_bad}')
 cols.insert(0, cols.pop(cols.index('first_name')))
 cols.insert(1, cols.pop(cols.index('last_name')))
 cols.insert(2, cols.pop(cols.index('email')))
-cols.insert(3, cols.pop(cols.index('phone')))
+#cols.insert(3, cols.pop(cols.index('phone')))
 df = df.reindex(columns=cols)
 
 
@@ -142,11 +152,11 @@ else:
     pass
 
 # if there is a bad email then do stuff. its here to help with speed (not an issue but who knows) and to stop adding a second_contact_email when its not needed
-if ~df.email.str.contains(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').all():
+if ~df.email.str.contains(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$').all():
     if 'second_contact_email' in df.columns:
         # validate email and move bad ones
-        df['temp_second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
-        df['email'] = df[df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
+        df['temp_second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$', case=False, na=False)]['email']
+        df['email'] = df[df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$', case=False, na=False)]['email']
         # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
         df['second_contact_email'] = df['second_contact_email'].fillna('') + ', ' + df['temp_second_contact_email'].fillna('')
         del df['temp_second_contact_email']
@@ -158,8 +168,8 @@ if ~df.email.str.contains(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$').a
         if 'second_contact_email' not in df.columns:
             df['second_contact_email'] = ''
             # validate email and move bad ones
-            df['temp_second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
-            df['email'] = df[df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', case=False, na=False)]['email']
+            df['temp_second_contact_email'] = df[~df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$', case=False, na=False)]['email']
+            df['email'] = df[df['email'].str.contains(pat=r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$', case=False, na=False)]['email']
             # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
             df['second_contact_email'] = df['second_contact_email'].fillna('') + ', ' + df['temp_second_contact_email'].fillna('')
             del df['temp_second_contact_email']
@@ -204,38 +214,25 @@ df = df[df['email'].isnull() | ~df[df['email'].notnull()].duplicated(subset='ema
 df.groupby('email').agg(lambda x: ", ".join(x)).reset_index()
 del df['first_dupe']
 
-
-if df.phone.astype(str).str.contains(',').any():
-    if 'second_contact_phone' in df.columns:
-        # split phone numbers by comma and add to second_contact_phone
-        df['phone'], df['temp_phone'] = df['phone'].str.split(',', 1).str
-        df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_phone'].astype(str).fillna('')
-        del df['temp_phone']
-    if 'second_contact_phone' not in df.columns:
-        df['second_contact_phone'] = ''
-        df['phone'], df['temp_phone'] = df['phone'].str.split(',', 1).str
-        df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_phone'].astype(str).fillna('')
-        del df['temp_phone']
-
-# only keep numbers in phone column
-df['phone'] = df['phone'].replace('[^0-9]+', '', regex=True)
-
-# if there is a bad phone then do stuff. its here to help with speed (not an issue but who knows) and to stop adding a second_contact_phone when its not needed
-if df.phone.astype(str).str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
-    if 'second_contact_phone' in df.columns:
-        # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
-        df['temp_second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
-        df['phone'] = df[df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
-        # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
-        df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_second_contact_phone'].astype(str).fillna('')
-        del df['temp_second_contact_phone']
-        # this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
-        df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
-        # definitely not needed but one case bothered me so I added it
-        df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
-    else:
+if 'phone' in df.columns:
+    if df.phone.astype(str).str.contains(',').any():
+        if 'second_contact_phone' in df.columns:
+            # split phone numbers by comma and add to second_contact_phone
+            df['phone'], df['temp_phone'] = df['phone'].str.split(',', 1).str
+            df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_phone'].astype(str).fillna('')
+            del df['temp_phone']
         if 'second_contact_phone' not in df.columns:
             df['second_contact_phone'] = ''
+            df['phone'], df['temp_phone'] = df['phone'].str.split(',', 1).str
+            df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_phone'].astype(str).fillna('')
+            del df['temp_phone']
+
+    # only keep numbers in phone column
+    df['phone'] = df['phone'].replace('[^0-9]+', '', regex=True)
+
+    # if there is a bad phone then do stuff. its here to help with speed (not an issue but who knows) and to stop adding a second_contact_phone when its not needed
+    if df.phone.astype(str).str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
+        if 'second_contact_phone' in df.columns:
             # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
             df['temp_second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
             df['phone'] = df[df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
@@ -246,6 +243,20 @@ if df.phone.astype(str).str.contains('^(?:(?!^.{,7}$|^.{16,}$).)*$').any():
             df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
             # definitely not needed but one case bothered me so I added it
             df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
+        else:
+            if 'second_contact_phone' not in df.columns:
+                df['second_contact_phone'] = ''
+                # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
+                df['temp_second_contact_phone'] = df[~df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
+                df['phone'] = df[df['phone'].astype(str).str.contains(pat=r'^(?:(?!^.{,7}$|^.{16,}$).)*$', case=False, na=False)]['phone']
+                # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
+                df['second_contact_phone'] = df['second_contact_phone'].astype(str).fillna('') + ', ' + df['temp_second_contact_phone'].astype(str).fillna('')
+                del df['temp_second_contact_phone']
+                # this is to just clean up column (i.e. remove leadning what space, random extra commas from merge, and random .0)
+                df['second_contact_phone'] = df['second_contact_phone'].replace('((, )$|[,]$|(^\s)|(\.0))', '', regex=True)
+                # definitely not needed but one case bothered me so I added it
+                df['second_contact_phone'] = df['second_contact_phone'].replace('(  )', ' ', regex=True)
+
 
 
 # gets rid of random nan that pops up sometimes
