@@ -2,22 +2,26 @@ import pandas as pd
 from header_list import rename_list, match_list
 
 
-# still adds .0 - think solved by dtye=str
-# think about removing trailing white space in email column to help validator
+# remove .astype(str) in over places to avoid nan like I did for address
+# merge on Contact Id?
 
 # point to file location.
-filename = '/Users/derrick/Documents/Random Stuff/CSV/test.csv'
+filename = '/Users/derrick/Documents/Random Stuff/CSV/test-csvs/name2long.csv'
 # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
-df = pd.read_csv(filename, sep=None, dtype=str, engine='python')
+df = pd.read_csv(filename, dtype=str, encoding='ISO-8859-1')
 df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
 df.index += 2  # so when it says "check these lines" the numbers match with csv
 # removes empty rows then empty columns
 df = df.dropna(how='all')
 df = df.dropna(axis=1, how='all')
 
-if 'first_name' and 'last_name' not in df.columns:
+if 'first_name' not in df.columns or 'last_name' not in df.columns:
+    # for liondesk one off
     if 'name' in df.columns:
-        df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
+        if 'last_name' in df.columns:
+            df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
+        elif 'last_name' not in df.columns:
+            df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
     # for top producer
     elif 'contact' in df.columns:
         df[['last_name', 'first_name']] = df['contact'].str.split(',', 1, expand=True)
@@ -34,7 +38,7 @@ for rename_col in rename_list:
     tried_colname = []
     # for each possible column name in current_list
     for try_col in current_list:
-        # if the rename_col not in df 
+        # if the rename_col not in df
         if rename_col not in df.columns:
             try:
                 # try to find try_col in df and rename it to what rename_col is
@@ -42,7 +46,7 @@ for rename_col in rename_list:
                 # add try_col to tried_col list so we don't try it again
                 tried_colname.append(try_col)
                 # if the rename does not add rename_col to df and i is less than 4 then do below
-                # I have i < 4 because the first 4 columns are needed to merger so they go through an additional matching attempt 
+                # I have i < 4 because the first 4 columns are needed to merger so they go through an additional matching attempt
                 # and the others are just so the headers are automatically matched when uploaded
                 if rename_col not in df.columns and i < 4:
                     # if the number of items we tried equals the number of items in the list
@@ -71,6 +75,7 @@ for rename_col in rename_list:
         else:
             break  # just to be safe
 
+
 # not needed since above raises an exception if any of the below columns aren't in df or matched this is just a safety check since it is quick
 if 'first_name' not in df.columns:
     raise KeyError('CSV file does not have a first_name column.')
@@ -83,27 +88,36 @@ if 'email' not in df.columns:
     # raise KeyError('CSV file does not have a phone column.')
 
 
+# moves values in first_name column that are more than 256 characters (that is the limit for the bulk import tool) to the long_first_name column so it is not rejected
+df['long_first_name'] = df[df['first_name'].str.len() > 256]['first_name']
+# only keeps values in the first_name column if it is less than or equal to 256 characters
+df['first_name'] = df[df['first_name'].str.len() <= 256]['first_name']
+df['long_last_name'] = df[df['last_name'].str.len() > 256]['last_name']
+df['last_name'] = df[df['last_name'].str.len() <= 256]['last_name']
+
+
+# Got rid of astype(str) before .fillna('') and it resolved the random nan showing up in the address field
 if 'address' not in df.columns:
     # if all of these things are columns in the df then combine them under the column name 'address'
-    if set(['house_number', 'dir_prefix', 'street', 'street_type', 'dir_suffix', 'suite', 'po_box']).issubset(df.columns):
-        df['address'] = (df['house_number'].astype(str).fillna('') + ' ' + df['dir_prefix'].astype(str).fillna('') + ' ' + 
-        df['street'].astype(str).fillna('') + ' ' + df['street_type'].astype(str).fillna('') + ' ' + df['dir_suffix'].astype(str).fillna('') + ' ' + 
-        df['suite'].astype(str).fillna('') + ' ' + df['po_box'].astype(str).fillna(''))
-    elif set(['house_number', 'direction_prefix', 'street', 'street_designator', 'suite_no']).issubset(df.columns):
-        df['address'] = (df['house_number'].astype(str).fillna('') + ' ' + df['direction_prefix'].astype(str).fillna('') + ' ' + 
-        df['street'].astype(str).fillna('') + ' ' + df['street_designator'].astype(str).fillna('') + ' ' + df['suite_no'].astype(str).fillna(''))
+    if {'house_number', 'dir_prefix', 'street', 'street_type', 'dir_suffix', 'suite', 'po_box'}.issubset(df.columns):
+        df['address'] = (df['house_number'].fillna('') + ' ' + df['dir_prefix'].fillna('') + ' ' +
+        df['street'].fillna('') + ' ' + df['street_type'].fillna('') + ' ' + df['dir_suffix'].fillna('') + ' ' +
+        df['suite'].fillna('') + ' ' + df['po_box'].fillna(''))
+    elif {'house_number', 'direction_prefix', 'street', 'street_designator', 'suite_no'}.issubset(df.columns):
+        df['address'] = (df['house_number'].fillna('') + ' ' + df['direction_prefix'].fillna('') + ' ' +
+        df['street'].fillna('') + ' ' + df['street_designator'].fillna('') + ' ' + df['suite_no'].fillna(''))
 
 if 'assigned_agent' not in df.columns:
     # if these columns in the df then combine them under the column name 'assigned_agent'
-    if set(['member_first_name', 'member_last_name']).issubset(df.columns):
+    if {'member_first_name', 'member_last_name'}.issubset(df.columns):
         df['assigned_agent'] = df['member_first_name'].fillna('') + ' ' + df['member_last_name'].fillna('')
 
 if 'second_contact_name' not in df.columns:
     # if all of these things are columns in the df then combine them under the column name 'second_contact_name'
-    if set(['secondary_title', 'secondary_first_name', 'secondary_nickname', 'secondary_last_name']).issubset(df.columns):
-        df['second_contact_name'] = (df['secondary_title'].fillna('') + ' ' + df['secondary_first_name'].fillna('') + ' ' + 
+    if {'secondary_title', 'secondary_first_name', 'secondary_nickname', 'secondary_last_name'}.issubset(df.columns):
+        df['second_contact_name'] = (df['secondary_title'].fillna('') + ' ' + df['secondary_first_name'].fillna('') + ' ' +
         df['secondary_nickname'].fillna('') + df['secondary_last_name'].fillna(''))
-    elif set(['first_name_2', 'last_name_2']).issubset(df.columns):
+    elif {'first_name_2', 'last_name_2'}.issubset(df.columns):
         df['second_contact_name'] = df['first_name_2'].fillna('') + ' ' + df['last_name_2'].fillna('')
 
 
@@ -127,8 +141,16 @@ print(f'Check these lines for an incomplete phone number: {phone_bad}')
 cols.insert(0, cols.pop(cols.index('first_name')))
 cols.insert(1, cols.pop(cols.index('last_name')))
 cols.insert(2, cols.pop(cols.index('email')))
-#cols.insert(3, cols.pop(cols.index('phone')))
+if 'phone' in df.columns:
+    cols.insert(3, cols.pop(cols.index('phone')))
+
+
 df = df.reindex(columns=cols)
+
+
+# makes contents of email column lower case so it doesn't think example@Yahoo.com and example@yahoo.com are different emails
+
+df['email'] = df.email.astype(str).str.lower()
 
 
 if (df['email'].str.contains(',')).any():
@@ -151,7 +173,8 @@ if (df['email'].str.contains(',')).any():
 else:
     pass
 
-# if there is a bad email then do stuff. its here to help with speed (not an issue but who knows) and to stop adding a second_contact_email when its not needed
+# if there is a bad email then do stuff. its here to help with speed (not an issue but who knows)
+# and to stop adding a second_contact_email when its not needed
 if ~df.email.str.contains(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-]+$').all():
     if 'second_contact_email' in df.columns:
         # validate email and move bad ones
@@ -188,6 +211,7 @@ col_headers = eval(get_col_headers)
 # https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
 df["first_dupe"] = df.duplicated("email", keep=False) & ~df.duplicated("email", keep="first")
 
+
 def combine_rows(row, key="email", cols_to_combine=col_headers[3:]):
     # takes in a row, looks at the key column if its the first dupe, combines the data in cols_to_combine with the other rows with same key
     # needs a dataframe with a bool column first_dupe with True if the row is the first dupe
@@ -201,7 +225,12 @@ def combine_rows(row, key="email", cols_to_combine=col_headers[3:]):
             for col in cols_to_combine:
                 dupe_row[col] = str(dupe_row[col])
                 row[col] = str(row[col])
-                row[col] += ", " + dupe_row[col]
+                # so fields don't have multiple of the same thing because of the merge
+                # e.g. buyer,buyer because 2 merged rows have the type buyer, now it just puts buyer there once
+                if row[col] != dupe_row[col]:
+                    row[col] += ", " + dupe_row[col]
+                else:
+                    continue
         # make sure first_dupe doesn't get processed again
         row.first_dupe = False
     return row
@@ -210,7 +239,7 @@ def combine_rows(row, key="email", cols_to_combine=col_headers[3:]):
 df = df.apply(combine_rows, axis=1, result_type=None)
 # drops dup emails but keep first instance since everything should have been merged into that but ignores cells that are empty because
 # before it would just delete all rows with an empty email cell but the first one.....
-df = df[df['email'].isnull() | ~df[df['email'].notnull()].duplicated(subset='email',keep='first')]
+df = df[df['email'].isnull() | ~df[df['email'].notnull()].duplicated(subset='email', keep='first')]
 df.groupby('email').agg(lambda x: ", ".join(x)).reset_index()
 del df['first_dupe']
 
