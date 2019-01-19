@@ -6,7 +6,7 @@ import time
 def main():
     start = time.time()
     # point to file location.
-    filename = '/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/name2long.csv'
+    filename = '/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/11.csv'
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
     df = pd.read_csv(filename, dtype=str, encoding='ISO-8859-1')
     df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
@@ -26,58 +26,7 @@ def main():
         elif 'contact' in df.columns:
             df[['last_name', 'first_name']] = df['contact'].str.split(',', 1, expand=True)
 
-    # might put into a functions - enumerate
-    # starts at -1 so it doesn't skip first entry in list
-    i = -1
-    # for each header column name in rename_list
-    for rename_col in rename_list:
-        i += 1
-        # get  i  nested list in match_list (the list with all possible column names) and assign it to current_list
-        current_list = match_list[i]
-        # create empty list of tried column header list from current_list
-        tried_colname = []
-        # for each possible column name in current_list
-        for try_col in current_list:
-            # if the rename_col not in df
-            if rename_col not in df.columns:
-                try:
-                    # try to find try_col in df and rename it to what rename_col is
-                    df.rename(columns={try_col: rename_col}, inplace=True)
-                    # add try_col to tried_col list so we don't try it again
-                    tried_colname.append(try_col)
-                    # if the rename does not add rename_col to df and i is less than 4 then do below
-                    # I have i < 4 because the first 4 columns are needed to merger so they go through an additional matching attempt
-                    # and the others are just so the headers are automatically matched when uploaded
-                    if rename_col not in df.columns and i < 4:
-                        # if the number of items we tried equals the number of items in the list
-                        if len(tried_colname) == len(current_list):
-                            try:
-                                # try to find the first column in df that is similar to rename_col and rename it to rename_col
-                                df = df.rename(columns={df.filter(like=rename_col).columns[0]: rename_col})
-                                # print('Filter match', rename_col)
-                                continue
-                            # if try didn't work then throw exception since those 4 columns are needed for merger
-                            except Exception as e:
-                                # print(f"Unable to match a column the same as or close to {rename_col}. - Exception: {e}")
-                                break
-                        else:
-                            continue
-                    # this breaks so it doesn't continue trying to check when it has already been match
-                    elif rename_col in df.columns:
-                        # print(f"Matched {rename_col} with {try_col}.")
-                        break
-                    else:
-                        # print(f"Unable to match {rename_col} with {try_col}.")
-                        continue
-                except Exception as e:
-                    print(f"How did you get here!? - Exception: {e}")
-                    break
-            else:
-                break  # just to be safe
-
-
-
-
+    df = match_column_headers(df)
 
     # moves values in first_name column that are more than 256 characters (that is the limit for the bulk import tool)
     # to the long_first_name column so it is not rejected
@@ -120,6 +69,66 @@ def main():
     df.to_csv('/Users/derrick/Desktop/done.csv', index=False)
     finish = time.time() - start
     print(f'CSV has been printed in {finish} seconds.')
+
+
+def match_column_headers(df):
+    """
+       This is trying to match the headers of the column to one of the options in rename_list so they will be automatically
+       matched by the system when uploaded. The commented out chunk that starts with
+       `if rename_col not in df.columns and i < 4:` was there originally due to needed certain columns (first_name,
+       last_name, email, phone) for the merger to work so this part tried to guess something close to these columns but
+       since those aren't needed for the merger anymore this part isn't needed. I left it in just in case I decided
+       guessing column names may be useful.
+       """
+    # for each header column name in rename_list
+    for i, rename_col in enumerate(rename_list):
+        # get  i  nested list in match_list (the list with all possible column names) and assign it to current_list
+        current_list = match_list[i]
+        # create empty list of tried column header list from current_list
+        tried_colname = []
+        # for each possible column name in current_list
+        for try_col in current_list:
+            # if the rename_col not in df
+            if rename_col not in df.columns:
+                try:
+                    # try to find try_col in df and rename it to what rename_col is
+                    df.rename(columns={try_col: rename_col}, inplace=True)
+                    # add try_col to tried_col list so we don't try it again
+                    tried_colname.append(try_col)
+                    """
+                    if the rename does not add rename_col to df and i is less than 4 then do the below code
+                    I have i < 4 because the first 4 columns (which were first_name, last_name, email, phone) was 
+                    needed for the merger so they go through an additional matching attempt by basically trying to 
+                    find something close to the column names.
+                    """
+                    """
+                    if rename_col not in df.columns and i < 4:
+                        # if the number of items we tried equals the number of items in the list
+                        if len(tried_colname) == len(current_list):
+                            try:
+                                # try to find the first column in df that is similar to rename_col and rename it to rename_col
+                                df = df.rename(columns={df.filter(like=rename_col).columns[0]: rename_col})
+                                # print('Filter match', rename_col)
+                                continue
+                            # if try didn't work then throw exception since those 4 columns are needed for merger
+                            except Exception as e:
+                                # print(f"Unable to match a column the same as or close to {rename_col}. - Exception: {e}")
+                                break
+                        else:
+                            continue
+                    # this breaks so it doesn't continue trying to check when it has already been match
+                    """
+                    if rename_col in df.columns:
+                        # print(f"Matched {rename_col} with {try_col}.")
+                        break
+                    else:
+                        # print(f"Unable to match {rename_col} with {try_col}.")
+                        continue
+                except Exception as e:
+                    print(f"How did you get here!? - Exception: {e}")
+                    break
+
+    return df
 
 
 def move_long_names(df, type_of_name):
