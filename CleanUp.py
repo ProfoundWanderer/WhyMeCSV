@@ -10,7 +10,6 @@ def main():
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
     df = pd.read_csv(filename, dtype=str, encoding='ISO-8859-1')
     df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
-    df.index += 2  # so when it says "check these lines" the numbers match with csv
     # removes empty rows then empty columns
     df = df.dropna(how='all')
     df = df.dropna(axis=1, how='all')
@@ -92,8 +91,6 @@ def match_column_headers(df):
     for i, rename_col in enumerate(rename_list):
         # get  i  nested list in match_list (the list with all possible column names) and assign it to current_list
         current_list = match_list[i]
-        # create empty list of tried column header list from current_list
-        tried_colname = []
         # for each possible column name in current_list
         for try_col in current_list:
             # if the rename_col not in df
@@ -101,8 +98,6 @@ def match_column_headers(df):
                 try:
                     # try to find try_col in df and rename it to what rename_col is
                     df.rename(columns={try_col: rename_col}, inplace=True)
-                    # add try_col to tried_col list so we don't try it again
-                    tried_colname.append(try_col)
                     """
                     if the rename does not add rename_col to df and i is less than 4 then do the below code
                     I have i < 4 because the first 4 columns (which were first_name, last_name, email, phone) was 
@@ -110,6 +105,13 @@ def match_column_headers(df):
                     find something close to the column names.
                     """
                     """
+                    # create empty list of tried column header list from current_list. **If using this section of code
+                    # add tried_colname before `for try_col`
+                    # tried_colname = []
+                    
+                    # add try_col to tried_col list so we don't try it again
+                    tried_colname.append(try_col)
+                    
                     if rename_col not in df.columns and i < 4:
                         # if the number of items we tried equals the number of items in the list
                         if len(tried_colname) == len(current_list):
