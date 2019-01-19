@@ -6,7 +6,7 @@ import time
 def main():
     start = time.time()
     # point to file location.
-    filename = '/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/11.csv'
+    filename = '/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/name2long.csv'
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
     df = pd.read_csv(filename, dtype=str, encoding='ISO-8859-1')
     df.columns = [i.lower().replace(' ', '_') for i in df.columns]  # lower case and replace spaces
@@ -15,16 +15,9 @@ def main():
     df = df.dropna(how='all')
     df = df.dropna(axis=1, how='all')
 
-    if 'first_name' not in df.columns or 'last_name' not in df.columns:
-        # for liondesk one off
-        if 'name' in df.columns:
-            if 'last_name' in df.columns:
-                df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
-            elif 'last_name' not in df.columns:
-                df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
-        # for top producer
-        elif 'contact' in df.columns:
-            df[['last_name', 'first_name']] = df['contact'].str.split(',', 1, expand=True)
+    # if first_name and last_name not in file then it tries to see if there is something like name then split it into
+    # first_name and last_name
+    df = try_creating_first_and_last_name(df)
 
     df = match_column_headers(df)
 
@@ -69,6 +62,21 @@ def main():
     df.to_csv('/Users/derrick/Desktop/done.csv', index=False)
     finish = time.time() - start
     print(f'CSV has been printed in {finish} seconds.')
+
+
+def try_creating_first_and_last_name(df):
+    if 'first_name' not in df.columns or 'last_name' not in df.columns:
+        # for liondesk
+        if 'name' in df.columns:
+            if 'last_name' in df.columns:
+                df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
+            elif 'last_name' not in df.columns:
+                df[['first_name', 'last_name']] = df['name'].str.split(' ', 1, expand=True)
+        # for top producer
+        elif 'contact' in df.columns:
+            df[['last_name', 'first_name']] = df['contact'].str.split(',', 1, expand=True)
+
+    return df
 
 
 def match_column_headers(df):
