@@ -116,10 +116,10 @@ def match_column_headers(df):
                     # create empty list of tried column header list from current_list. **If using this section of code
                     # add tried_colname before `for try_col`
                     # tried_colname = []
-                    
+
                     # add try_col to tried_col list so we don't try it again
                     tried_colname.append(try_col)
-                    
+
                     if rename_col not in df.columns and i < 4:
                         # if the number of items we tried equals the number of items in the list
                         if len(tried_colname) == len(current_list):
@@ -172,19 +172,19 @@ def try_creating_address(df):
         "po_box",
     }.issubset(df.columns):
         df["address"] = (
-            df["house_number"].fillna("")
-            + " "
-            + df["dir_prefix"].fillna("")
-            + " "
-            + df["street"].fillna("")
-            + " "
-            + df["street_type"].fillna("")
-            + " "
-            + df["dir_suffix"].fillna("")
-            + " "
-            + df["suite"].fillna("")
-            + " "
-            + df["po_box"].fillna("")
+                df["house_number"].fillna("")
+                + " "
+                + df["dir_prefix"].fillna("")
+                + " "
+                + df["street"].fillna("")
+                + " "
+                + df["street_type"].fillna("")
+                + " "
+                + df["dir_suffix"].fillna("")
+                + " "
+                + df["suite"].fillna("")
+                + " "
+                + df["po_box"].fillna("")
         )
     elif {
         "house_number",
@@ -194,15 +194,15 @@ def try_creating_address(df):
         "suite_no",
     }.issubset(df.columns):
         df["address"] = (
-            df["house_number"].fillna("")
-            + " "
-            + df["direction_prefix"].fillna("")
-            + " "
-            + df["street"].fillna("")
-            + " "
-            + df["street_designator"].fillna("")
-            + " "
-            + df["suite_no"].fillna("")
+                df["house_number"].fillna("")
+                + " "
+                + df["direction_prefix"].fillna("")
+                + " "
+                + df["street"].fillna("")
+                + " "
+                + df["street_designator"].fillna("")
+                + " "
+                + df["suite_no"].fillna("")
         )
     else:
         pass
@@ -214,7 +214,7 @@ def try_creating_assigned_agent(df):
     # if these columns in the df then combine them under the column name 'assigned_agent'
     if {"member_first_name", "member_last_name"}.issubset(df.columns):
         df["assigned_agent"] = (
-            df["member_first_name"].fillna("") + " " + df["member_last_name"].fillna("")
+                df["member_first_name"].fillna("") + " " + df["member_last_name"].fillna("")
         )
     else:
         pass
@@ -231,16 +231,16 @@ def try_creating_second_contact_name(df):
         "secondary_last_name",
     }.issubset(df.columns):
         df["second_contact_name"] = (
-            df["secondary_title"].fillna("")
-            + " "
-            + df["secondary_first_name"].fillna("")
-            + " "
-            + df["secondary_nickname"].fillna("")
-            + df["secondary_last_name"].fillna("")
+                df["secondary_title"].fillna("")
+                + " "
+                + df["secondary_first_name"].fillna("")
+                + " "
+                + df["secondary_nickname"].fillna("")
+                + df["secondary_last_name"].fillna("")
         )
     elif {"first_name_2", "last_name_2"}.issubset(df.columns):
         df["second_contact_name"] = (
-            df["first_name_2"].fillna("") + " " + df["last_name_2"].fillna("")
+                df["first_name_2"].fillna("") + " " + df["last_name_2"].fillna("")
         )
     else:
         pass
@@ -261,13 +261,13 @@ def clean_email_column(df):
         df["email"], df["secondary_email"] = df["email"].str.split(",", 1).str
 
         if (
-            "second_contact_email" in df.columns
+                "second_contact_email" in df.columns
         ):  # this handles in case they do have the 'second_contact_email' column
             # Merges secondary_email into the 'second_contact_email' column
             df["second_contact_email"] = (
-                df["second_contact_email"].fillna("")
-                + ", "
-                + df["secondary_email"].fillna("")
+                    df["second_contact_email"].fillna("")
+                    + ", "
+                    + df["secondary_email"].fillna("")
             )
             # this is to just clean up column (i.e. remove leadning what space and random extra commas from merge)
             df["second_contact_email"] = df["second_contact_email"].replace(
@@ -275,8 +275,8 @@ def clean_email_column(df):
             )
 
             df = df.iloc[
-                :, :-1
-            ]  # drops last column so there isn't double 'second_contact_email'
+                 :, :-1
+                 ]  # drops last column so there isn't double 'second_contact_email'
 
         df.rename(columns={"secondary_email": "second_contact_email"}, inplace=True)
     else:
@@ -303,9 +303,9 @@ def clean_email_column(df):
             ]["email"]
             # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
             df["second_contact_email"] = (
-                df["second_contact_email"].fillna("")
-                + ", "
-                + df["temp_second_contact_email"].fillna("")
+                    df["second_contact_email"].fillna("")
+                    + ", "
+                    + df["temp_second_contact_email"].fillna("")
             )
             del df["temp_second_contact_email"]
             # this is to just clean up column (i.e. remove leadning what space and random extra commas from merge)
@@ -336,9 +336,9 @@ def clean_email_column(df):
                 ]["email"]
                 # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
                 df["second_contact_email"] = (
-                    df["second_contact_email"].fillna("")
-                    + ", "
-                    + df["temp_second_contact_email"].fillna("")
+                        df["second_contact_email"].fillna("")
+                        + ", "
+                        + df["temp_second_contact_email"].fillna("")
                 )
                 del df["temp_second_contact_email"]
                 # this is to just clean up column (i.e. remove leadning what space and random extra commas from merge)
@@ -359,18 +359,18 @@ def clean_phone_column(df):
             # split phone numbers by comma and add to second_contact_phone
             df["phone"], df["temp_phone"] = df["phone"].str.split(",", 1).str
             df["second_contact_phone"] = (
-                df["second_contact_phone"].astype(str).fillna("")
-                + ", "
-                + df["temp_phone"].astype(str).fillna("")
+                    df["second_contact_phone"].astype(str).fillna("")
+                    + ", "
+                    + df["temp_phone"].astype(str).fillna("")
             )
             del df["temp_phone"]
         if "second_contact_phone" not in df.columns:
             df["second_contact_phone"] = ""
             df["phone"], df["temp_phone"] = df["phone"].str.split(",", 1).str
             df["second_contact_phone"] = (
-                df["second_contact_phone"].astype(str).fillna("")
-                + ", "
-                + df["temp_phone"].astype(str).fillna("")
+                    df["second_contact_phone"].astype(str).fillna("")
+                    + ", "
+                    + df["temp_phone"].astype(str).fillna("")
             )
             del df["temp_phone"]
 
@@ -383,19 +383,17 @@ def clean_phone_column(df):
             # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
             df["temp_second_contact_phone"] = df[
                 ~df["phone"]
-                .astype(str)
-                .str.contains(pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False)
+                    .astype(str)
+                    .str.contains(pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False)
             ]["phone"]
             df["phone"] = df[
-                df["phone"]
-                .astype(str)
-                .str.contains(pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False)
+                df["phone"].astype(str).str.contains(pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False)
             ]["phone"]
             # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
             df["second_contact_phone"] = (
-                df["second_contact_phone"].astype(str).fillna("")
-                + ", "
-                + df["temp_second_contact_phone"].astype(str).fillna("")
+                    df["second_contact_phone"].astype(str).fillna("")
+                    + ", "
+                    + df["temp_second_contact_phone"].astype(str).fillna("")
             )
             del df["temp_second_contact_phone"]
             # this is to just clean up column (i.e. remove leadning what space,
@@ -413,23 +411,23 @@ def clean_phone_column(df):
                 # moves phone numbers less than 8 and greater than 15 digits then removes them from phone
                 df["temp_second_contact_phone"] = df[
                     ~df["phone"]
-                    .astype(str)
-                    .str.contains(
+                        .astype(str)
+                        .str.contains(
                         pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False
                     )
                 ]["phone"]
                 df["phone"] = df[
                     df["phone"]
-                    .astype(str)
-                    .str.contains(
+                        .astype(str)
+                        .str.contains(
                         pat=r"^(?:(?!^.{,7}$|^.{16,}$).)*$", case=False, na=False
                     )
                 ]["phone"]
                 # merges columns so original second_contact_email doesn't get replaced by temp_second_contact_email
                 df["second_contact_phone"] = (
-                    df["second_contact_phone"].astype(str).fillna("")
-                    + ", "
-                    + df["temp_second_contact_phone"].astype(str).fillna("")
+                        df["second_contact_phone"].astype(str).fillna("")
+                        + ", "
+                        + df["temp_second_contact_phone"].astype(str).fillna("")
                 )
                 del df["temp_second_contact_phone"]
                 # this is to just clean up column (i.e. remove leadning what space, random extra
@@ -450,11 +448,7 @@ def merge_rows(df, merge_on):
 
     # filtering out columns 'first_name', 'last_name', 'email', 'contact_id' from df
     # so merger doesn't merge these columns, it just keeps the first instance of them
-    new_df = df[
-        df.columns.difference(
-            ["first_name", "last_name", "email"]
-        )
-    ]
+    new_df = df[df.columns.difference(["first_name", "last_name", "email"])]
 
     # marks the first instance of a duplicate as true
     df["first_dupe"] = df.duplicated(merge_on, keep=False) & ~df.duplicated(
@@ -462,7 +456,6 @@ def merge_rows(df, merge_on):
     )
 
     # https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
-
     def combine_rows(row, key=merge_on, cols_to_combine=new_df):
         # takes in a row, looks at the key column if its the first dupe, combines the data in cols_
         # to_combine with the other rows with same key needs a dataframe with a bool column first_
@@ -492,7 +485,7 @@ def merge_rows(df, merge_on):
     df = df[
         df[merge_on].isnull()
         | ~df[df[merge_on].notnull()].duplicated(subset=merge_on, keep="first")
-    ]
+        ]
     df.groupby(merge_on).agg(lambda x: ", ".join(x)).reset_index()
     del df["first_dupe"]
 
@@ -520,4 +513,3 @@ if __name__ == "__main__":
     main()
     finish = time.time() - start
     print(f"CSV has been printed in {finish} seconds.")
-
