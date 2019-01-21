@@ -4,7 +4,6 @@ import time
 
 
 def main():
-    start = time.time()
     # point to file location.
     filename = "/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/name2long.csv"
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
@@ -20,6 +19,7 @@ def main():
     # first_name and last_name
     df = try_creating_first_and_last_name(df)
 
+    # trying to change the headers of the file to ones that will automatically match with ones in the system
     df = match_column_headers(df)
 
     # moves values in first_name column that are more than 256 characters (that is the limit for the bulk import tool)
@@ -51,7 +51,9 @@ def main():
         df = clean_phone_column(df)
 
     # merges rows with the same email then merges rows with the same contact_id
-    df = merge_rows(df, "email", "contact_id")
+    # sending two things only works if the other column doesn't have an email if it does this the email just vanishes
+    if "email" in df.columns:
+        df = merge_rows(df, "email")
 
     if "phone" in df.columns:
         df = clean_phone_column(df)
@@ -61,8 +63,6 @@ def main():
     # Convert header names back so system automatically catches it
     df.columns = [i.title().replace("_", " ") for i in df.columns]
     df.to_csv("/Users/derrick/Desktop/done.csv", index=False)
-    finish = time.time() - start
-    print(f"CSV has been printed in {finish} seconds.")
 
 
 def try_creating_first_and_last_name(df):
@@ -445,59 +445,59 @@ def clean_phone_column(df):
     return df
 
 
-def merge_rows(df, *args):
-    for merge in args:
-        if merge in df.columns:
-            # filtering out columns 'first_name', 'last_name', 'email', 'contact_id' from df
-            # so merger doesn't merge these columns, it just keeps the first instance of them
-            new_df = df[
-                df.columns.difference(
-                    ["first_name", "last_name", "email", "contact_id"]
-                )
-            ]
+def merge_rows(df, merge_on):
+    sssss = time.time()
 
-            # searches column named email and drops duplicates but keeps the first one and merges data
-            df["first_dupe"] = df.duplicated(merge, keep=False) & ~df.duplicated(
-                merge, keep="first"
-            )
+    # filtering out columns 'first_name', 'last_name', 'email', 'contact_id' from df
+    # so merger doesn't merge these columns, it just keeps the first instance of them
+    new_df = df[
+        df.columns.difference(
+            ["first_name", "last_name", "email"]
+        )
+    ]
 
-            # https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
+    # marks the first instance of a duplicate as true
+    df["first_dupe"] = df.duplicated(merge_on, keep=False) & ~df.duplicated(
+        merge_on, keep="first"
+    )
 
-            def combine_rows(row, key=merge, cols_to_combine=new_df):
-                # takes in a row, looks at the key column if its the first dupe, combines the data in cols_
-                # to_combine with the other rows with same key needs a dataframe with a bool column first_
-                # dupe with True if the row is the first dupe
-                if row["first_dupe"] is True:
-                    # making a df of dupes item
-                    dupes = df[df[key] == row[key]]
+    # https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
 
-                    # skipping the first row, since thats our first_dupe
-                    for i, dupe_row in dupes.iloc[1:].iterrows():
-                        for col in cols_to_combine:
-                            dupe_row[col] = str(dupe_row[col])
-                            row[col] = str(row[col])
-                            # so fields don't have multiple of the same thing because of the merge
-                            # e.g. buyer,buyer because 2 merged rows have the type buyer,
-                            # now it just puts buyer there once
-                            if row[col] != dupe_row[col]:
-                                row[col] += ", " + dupe_row[col]
-                            else:
-                                continue
-                    # make sure first_dupe doesn't get processed again
-                    row.first_dupe = False
-                return row
+    def combine_rows(row, key=merge_on, cols_to_combine=new_df):
+        # takes in a row, looks at the key column if its the first dupe, combines the data in cols_
+        # to_combine with the other rows with same key needs a dataframe with a bool column first_
+        # dupe with True if the row is the first dupe
+        if row["first_dupe"] is True:
+            # making a df of dupes item
+            dupes = df[df[key] == row[key]]
 
-            df = df.apply(combine_rows, axis=1, result_type=None)
-            # drops dup emails but keep first instance since everything should have been
-            # merged into the first instance but ignores cells that are empty because before it would
-            # just delete all rows with an empty email cell but the first one.....
-            df = df[
-                df[merge].isnull()
-                | ~df[df[merge].notnull()].duplicated(subset=merge, keep="first")
-            ]
-            df.groupby(merge).agg(lambda x: ", ".join(x)).reset_index()
-            del df["first_dupe"]
+            # skipping the first row, since thats our first_dupe
+            for i, dupe_row in dupes.iloc[1:].iterrows():
+                for col in cols_to_combine:
+                    dupe_row[col] = str(dupe_row[col])
+                    row[col] = str(row[col])
+                    # so fields don't have multiple of the same thing because of the merge
+                    # e.g. buyer,buyer because 2 merged rows have the type buyer,
+                    # now it just puts buyer there once
+                    if row[col].lower() not in dupe_row[col].lower():
+                        row[col] += ", " + dupe_row[col]
+            # make sure first_dupe doesn't get processed again
+            row.first_dupe = False
+        return row
 
+    df = df.apply(combine_rows, axis=1)
+    # drops dup emails but keep first instance since everything should have been
+    # merged into the first instance but ignores cells that are empty because before it would
+    # just delete all rows with an empty email cell but the first one.....
+    df = df[
+        df[merge_on].isnull()
+        | ~df[df[merge_on].notnull()].duplicated(subset=merge_on, keep="first")
+    ]
+    df.groupby(merge_on).agg(lambda x: ", ".join(x)).reset_index()
+    del df["first_dupe"]
+
+    fffff = time.time() - sssss
+    print(f"Merger took {fffff} seconds.")
     return df
 
 
@@ -516,4 +516,8 @@ def cleanup(df):
 
 
 if __name__ == "__main__":
+    start = time.time()
     main()
+    finish = time.time() - start
+    print(f"CSV has been printed in {finish} seconds.")
+
