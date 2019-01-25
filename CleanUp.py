@@ -3,9 +3,20 @@ from header_list import rename_list, match_list
 import time
 
 
-def main():
-    # point to file location.
-    filename = "/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/name2long.csv"
+def main(filename):
+    """Fetches rows from a Bigtable.
+
+        Retrieves rows pertaining to the given keys from the Table
+        instance represented by big_table. Silly things may happen if
+        other_silly_variable is not None.
+
+        Args:
+            filename::pandas dataframe
+                Location of CSV file.
+
+        Returns:
+            Doesn't return anything it just prints the CSV file.
+    """
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
     df = pd.read_csv(filename, dtype=str, encoding="ISO-8859-1")
     df.columns = [
@@ -17,7 +28,8 @@ def main():
 
     # if first_name and last_name not in file then it tries to see if there is something like name then split it into
     # first_name and last_name
-    df = try_creating_first_and_last_name(df)
+    if "first_name" not in df.columns or "last_name" not in df.columns:
+        df = try_creating_first_and_last_name(df)
 
     # trying to change the headers of the file to ones that will automatically match with ones in the system
     df = match_column_headers(df)
@@ -50,8 +62,10 @@ def main():
     if "phone" in df.columns:
         df = clean_phone_column(df)
 
-    # merges rows with the same email then merges rows with the same contact_id
+    # merges rows with the same email
     # sending two things only works if the other column doesn't have an email if it does this the email just vanishes
+    # so changed it so it only merges email again but made it easier to change what it changes on in case someone wants
+    # to perhaps has it set to email run this script then change it to something like contact_id and run it again
     if "email" in df.columns:
         df = merge_rows(df, "email")
 
@@ -66,35 +80,60 @@ def main():
 
 
 def try_creating_first_and_last_name(df):
-    if "first_name" not in df.columns or "last_name" not in df.columns:
-        # for liondesk
-        if "name" in df.columns:
-            if "last_name" in df.columns:
-                df[["first_name", "last_name"]] = df["name"].str.split(
-                    " ", 1, expand=True
-                )
-            elif "last_name" not in df.columns:
-                df[["first_name", "last_name"]] = df["name"].str.split(
-                    " ", 1, expand=True
-                )
-        # for top producer
-        elif "contact" in df.columns:
-            df[["last_name", "first_name"]] = df["contact"].str.split(
-                ",", 1, expand=True
+    """Separate "name" into "first_name" and "last_name".
+
+        If "name" it splits it by the first space into "first_name" and "last_name". If "name" not in the df but
+        "contact" is then it splits it by the first comma into "first_name" and "last_name".
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
+
+    # for liondesk
+    if "name" in df.columns:
+        if "last_name" in df.columns:
+            df[["first_name", "last_name"]] = df["name"].str.split(
+                " ", 1, expand=True
             )
+        elif "last_name" not in df.columns:
+            df[["first_name", "last_name"]] = df["name"].str.split(
+                " ", 1, expand=True
+            )
+    # for top producer
+    elif "contact" in df.columns:
+        df[["last_name", "first_name"]] = df["contact"].str.split(
+            ",", 1, expand=True
+        )
 
     return df
 
 
 def match_column_headers(df):
-    """
-       This is trying to match the headers of the column to one of the options in rename_list so they will be
-       automatically matched by the system when uploaded. The commented out chunk that starts with
-       `if rename_col not in df.columns and i < 4:` was there originally due to needed certain columns (first_name,
-       last_name, email, phone) for the merger to work so this part tried to guess something close to these columns but
-       since those aren't needed for the merger anymore this part isn't needed. I left it in just in case I decided
-       guessing column names may be useful.
-       """
+    """Tries to change column headers of df to ones that automatically match when using the RG bulk import tool.
+
+        This is trying to match the headers of the column to one of the options in rename_list so they will be
+        automatically matched by the RG bulk import system when uploaded. The commented out chunk that starts with
+        `if rename_col not in df.columns and i < 4:` was there originally due to needed certain columns (first_name,
+        last_name, email, phone) for the merger to work. This [commented out] part tried to guess something close
+        to these columns but since those aren't needed for the merger anymore this part isn't needed. I left it in
+        just in case I decided guessing column names may be useful.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+
+        Raises:
+            Exception: Shouldn't ever be raised and I haven't seen it raised but it's their just in case.
+   """
     # for each header column name in rename_list
     for i, rename_col in enumerate(rename_list):
         # get  i  nested list in match_list (the list with all possible column names) and assign it to current_list
@@ -151,6 +190,22 @@ def match_column_headers(df):
 
 
 def move_long_names(df, type_of_name):
+    """Separate "name" into "first_name" and "last_name".
+
+        If "name" it splits it by the first space into "first_name" and "last_name". If "name" not in the df but
+        "contact" is then it splits it by the first comma into "first_name" and "last_name".
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+            type_of_name::str
+                The column name you want to check if it is too long and if so put it
+                into another column labeled "long_{type_of_name}".
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # moves names over 256 characters to new column
     df[f"long_{type_of_name}"] = df[df[type_of_name].str.len() > 256][type_of_name]
     # only keeps values in the first_name column if it is less than or equal to 256 characters
@@ -160,6 +215,18 @@ def move_long_names(df, type_of_name):
 
 
 def try_creating_address(df):
+    """Joins separate columns into an "address" column.
+
+        If "address" not in the dataframe then it attempts to join other columns together to create an address column.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # Got rid of astype(str) before .fillna('') and it resolved the random nan showing up in the address field
     # if all of these things are columns in the df then combine them under the column name 'address'
     if {
@@ -204,13 +271,24 @@ def try_creating_address(df):
                 + " "
                 + df["suite_no"].fillna("")
         )
-    else:
-        pass
 
     return df
 
 
 def try_creating_assigned_agent(df):
+    """Joins separate columns into an "assigned_agent" column.
+
+        If "assigned_agent" is not in the dataframe then it attempts to join other
+        columns together to create an address column.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # if these columns in the df then combine them under the column name 'assigned_agent'
     if {"member_first_name", "member_last_name"}.issubset(df.columns):
         df["assigned_agent"] = (
@@ -223,6 +301,19 @@ def try_creating_assigned_agent(df):
 
 
 def try_creating_second_contact_name(df):
+    """Joins separate columns into a "second_contact_name" column.
+
+        If "second_contact_name" is not in the dataframe then it attempts to join other
+        columns together to create an second_contact_name column.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # if all of these things are columns in the df then combine them under the column name 'second_contact_name'
     if {
         "secondary_title",
@@ -249,6 +340,21 @@ def try_creating_second_contact_name(df):
 
 
 def clean_email_column(df):
+    """Cleans email column so there is only 1 valid email per row.
+
+        1. Makes the contents of the "email" column lowercase.
+        2. If rows in the "email" column contain a comma it splits it at the first column and moves everything
+            after the first column to the "second_contact_email".
+        3. Moves 'invalid' emails to the "second_contact_email" column.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # makes contents of email column lower case so it doesn't think example@Yahoo.com
     # and example@yahoo.com are different emails
     df["email"] = df.email.astype(str).str.lower()
@@ -354,6 +460,21 @@ def clean_email_column(df):
 
 
 def clean_phone_column(df):
+    """Cleans email column so there is only 1 valid email per row.
+
+        1. If rows in the "phone" column contain a comma it splits it at the first column and moves everything
+            after the first column to the "second_contact_phone".
+        2. Gets rid of everything but numbers in the phone column.
+        3. Moves 'invalid' phone numbers to the "second_contact_phone" column.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     if df.phone.astype(str).str.contains(",").any():
         if "second_contact_phone" in df.columns:
             # split phone numbers by comma and add to second_contact_phone
@@ -444,27 +565,66 @@ def clean_phone_column(df):
 
 
 def merge_rows(df, merge_on):
+    """Merge rows with the same value in the column passed to "merge_on".
+
+        1. Creates a temporary dataframe without "first_name" and "last_name" so their aren't instances of Joe, Joe
+            in the first_name column. Also, removing email since we do not want to combine emails since they are
+            the same so it will just keep the first instance of the email.
+        2. Marks the first instance of rows that have duplicate values as True in a new column named "first_dupe"
+        3. Applies the combine_rows function to the dataframe.
+        4. Drops the dupe rows but keep first instance since everything should have been merged into
+            the first instance but ignores cells that are empty because before it would just delete all
+            rows with an empty email cell but the first one.....
+        4. Deletes the "first_dupe" column since it is not needed anymore.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+            merge_on::str
+                The column you want to merge rows on if more than one row has the same value.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+
+        Asked for help and this guy helped. There is also a two liner way to do this but doesn't work as well
+        due to not trying to merge first_name and last_name:
+            https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
+    """
     sssss = time.time()
 
-    # filtering out columns 'first_name', 'last_name', 'email', 'contact_id' from df
-    # so merger doesn't merge these columns, it just keeps the first instance of them
     new_df = df[df.columns.difference(["first_name", "last_name", "email"])]
 
-    # marks the first instance of a duplicate as true
     df["first_dupe"] = df.duplicated(merge_on, keep=False) & ~df.duplicated(
         merge_on, keep="first"
     )
 
-    # https://github.com/khalido/notebooks/blob/master/pandas-dealing-with-dupes.ipynb
     def combine_rows(row, key=merge_on, cols_to_combine=new_df):
-        # takes in a row, looks at the key column if its the first dupe, combines the data in cols_
-        # to_combine with the other rows with same key needs a dataframe with a bool column first_
-        # dupe with True if the row is the first dupe
+        """Merge rows with the same value in the column passed to "merge_on".
+
+        1. Looks to see if there are any rows in "first_dupe" that are True.
+        2. Skips the first row since that is what we want to merge the other dupe rows into.
+        3. Merges the contents of the dupe row(s) into the the first instance if the contents it is merging
+            is not already in the cell.
+        4. Makes "first_dupe" False so it doesn't try to merge it again.
+
+        Args:
+            row::dataframe row
+                The rows of the dataframe.
+            key::str
+                The column you want to merge rows on if more than one row has the same value.
+            cols_to_combine::pandas dataframe
+                The columns you want to merge.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+        """
         if row["first_dupe"] is True:
             # making a df of dupes item
             dupes = df[df[key] == row[key]]
 
-            # skipping the first row, since thats our first_dupe
+            # skipping the first row, since that's our first_dupe
             for i, dupe_row in dupes.iloc[1:].iterrows():
                 for col in cols_to_combine:
                     dupe_row[col] = str(dupe_row[col])
@@ -479,14 +639,10 @@ def merge_rows(df, merge_on):
         return row
 
     df = df.apply(combine_rows, axis=1)
-    # drops dup emails but keep first instance since everything should have been
-    # merged into the first instance but ignores cells that are empty because before it would
-    # just delete all rows with an empty email cell but the first one.....
     df = df[
         df[merge_on].isnull()
         | ~df[df[merge_on].notnull()].duplicated(subset=merge_on, keep="first")
         ]
-    df.groupby(merge_on).agg(lambda x: ", ".join(x)).reset_index()
     del df["first_dupe"]
 
     fffff = time.time() - sssss
@@ -495,6 +651,19 @@ def merge_rows(df, merge_on):
 
 
 def cleanup(df):
+    """Cleans up the dataframe a bit.
+
+        This cleans up the dataframe a bit. It is not totally necessary but makes it look better by removing
+        random 'nan' and commas that may pop up due to merging things.
+
+        Args:
+            df::pandas dataframe
+                The CSV file as a dataframe.
+
+        Returns:
+            df::dataframe
+                The updated dataframe with the new columns.
+    """
     # gets rid of random nan that pops up sometimes
     df = df.replace(to_replace=r"(?:^|\W)nan(?:$|\W)", value="", regex=True)
     # these three just cleans up the file and gets rid of random commas.
@@ -509,7 +678,10 @@ def cleanup(df):
 
 
 if __name__ == "__main__":
+    # will only be executed when this module is run directly might be useful.
     start = time.time()
-    main()
+    # point to file location.
+    file = "/Users/derrick/Documents/Random Stuff/WhyMeCSV/test-csvs/1.csv"
+    main(file)
     finish = time.time() - start
     print(f"CSV has been printed in {finish} seconds.")
