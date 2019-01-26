@@ -4,18 +4,17 @@ import time
 
 
 def main(filename):
-    """Fetches rows from a Bigtable.
+    """Cleans up the CSV file
 
-        Retrieves rows pertaining to the given keys from the Table
-        instance represented by big_table. Silly things may happen if
-        other_silly_variable is not None.
+        Takes the CSV file and puts it into a pandas dataframe then cleans it up to make
+        it easier to upload into the RG bulk import tool.
 
         Args:
             filename::pandas dataframe
                 Location of CSV file.
 
         Returns:
-            Doesn't return anything it just prints the CSV file.
+            Doesn't return anything it just outputs the CSV file.
     """
     # sep=None so pandas tries to get the delimiter and dtype=str so columns don't sometimes have .0 added
     df = pd.read_csv(filename, dtype=str, encoding="ISO-8859-1")
