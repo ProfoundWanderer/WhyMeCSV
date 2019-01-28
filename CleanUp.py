@@ -62,9 +62,6 @@ def main(filename):
         df = clean_phone_column(df)
 
     # merges rows with the same email
-    # sending two things only works if the other column doesn't have an email if it does this the email just vanishes
-    # so changed it so it only merges email again but made it easier to change what it changes on in case someone wants
-    # to perhaps has it set to email run this script then change it to something like contact_id and run it again
     if "email" in df.columns:
         df = merge_rows(df, "email")
 
@@ -575,6 +572,11 @@ def merge_rows(df, merge_on):
             the first instance but ignores cells that are empty because before it would just delete all
             rows with an empty email cell but the first one.....
         4. Deletes the "first_dupe" column since it is not needed anymore.
+
+        Sending two things only works if the other column doesn't have an email if it does this the email
+        just vanishes so changed it so it only merges email again but made it easier to change what it changes
+        on in case someone wants to perhaps has it set to email run this script then change it to something like
+        contact_id and run it again.
 
         Args:
             df::pandas dataframe
